@@ -10,6 +10,18 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
   var exports = window.Shiny = window.Shiny || {};
 
+  (function (history) {
+    var pushState = history.pushState;
+    history.pushState = function (state) {
+      if (typeof history.onpushstate == "function") {
+        history.onpushstate({ state: state });
+      }
+      // whatever else you want to do
+      // maybe call onhashchange e.handler
+      return pushState.apply(history, arguments);
+    };
+  })(window.history);
+
   $(document).on('submit', 'form:not([action])', function (e) {
     e.preventDefault();
   });
@@ -1184,9 +1196,6 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
     addMessageHandler('pushState', function (message) {
       window.history.pushState(message.state, message.title, message.url);
-      // just to trigger a onpopstate event...
-      window.history.pushState(message.state, message.title, message.url);
-      window.history.back();
     });
 
     addMessageHandler('updateQueryString', function (message) {
