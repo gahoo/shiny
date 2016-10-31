@@ -10,17 +10,19 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
   var exports = window.Shiny = window.Shiny || {};
 
-  (function (history) {
-    var pushState = history.pushState;
-    history.pushState = function (state) {
-      if (typeof history.onpushstate == "function") {
-        history.onpushstate({ state: state });
-      }
-      // whatever else you want to do
-      // maybe call onhashchange e.handler
-      return pushState.apply(history, arguments);
-    };
-  })(window.history);
+  /*
+    (function(history){
+      var pushState = history.pushState;
+      history.pushState = function(state) {
+          if (typeof history.onpushstate == "function") {
+              history.onpushstate({state: state});
+          }
+          // whatever else you want to do
+          // maybe call onhashchange e.handler
+          return pushState.apply(history, arguments);
+      };
+    })(window.history);
+  */
 
   $(document).on('submit', 'form:not([action])', function (e) {
     e.preventDefault();
@@ -5336,6 +5338,16 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       inputs.setInput('.clientdata_url_search', window.location.search);
     };
 
+    /*
+      $(window).bind("popstate", function() {
+        inputs.setInput('.clientdata_url_search', window.location.search);
+      });
+    
+      $(window).bind("pushstate", function() {
+        inputs.setInput('.clientdata_url_search', window.location.search);
+      });
+    */
+
     // This is only the initial value of the hash. The hash can change, but
     // a reactive version of this isn't sent because w atching for changes can
     // require polling on some browsers. The JQuery hashchange plugin can be
@@ -5360,6 +5372,21 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     shinyapp.connect(initialValues);
     $(document).one("shiny:connected", function () {
       initDeferredIframes();
+
+      window.history.pushState({}, "", "#");
+      window.history.back();
+
+      (function (history) {
+        var pushState = history.pushState;
+        history.pushState = function (state) {
+          if (typeof history.onpushstate == "function") {
+            history.onpushstate({ state: state });
+          }
+          // whatever else you want to do
+          // maybe call onhashchange e.handler
+          return pushState.apply(history, arguments);
+        };
+      })(window.history);
     });
   } // function initShiny()
 
