@@ -17,15 +17,6 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     return result;
   };
 
-  /*
-    var origOnHashChange = window.onhashchange;
-    window.onhashchange = function() {
-      var result = origOnHashChange.apply(this, arguments);
-      $(document).trigger("hashchange");
-      return result;
-    };
-  */
-
   $(document).on('submit', 'form:not([action])', function (e) {
     e.preventDefault();
   });
@@ -5351,7 +5342,6 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     // require polling on some browsers. The JQuery hashchange plugin can be
     // used if this capability is important.
     initialValues['.clientdata_url_hash_initial'] = window.location.hash;
-
     initialValues['.clientdata_url_hash'] = window.location.hash;
 
     $(window).on('hashchange', function (e) {
