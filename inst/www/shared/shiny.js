@@ -17,6 +17,15 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     return result;
   };
 
+  /*
+    var origOnHashChange = window.onhashchange;
+    window.onhashchange = function() {
+      var result = origOnHashChange.apply(this, arguments);
+      $(document).trigger("hashchange");
+      return result;
+    };
+  */
+
   $(document).on('submit', 'form:not([action])', function (e) {
     e.preventDefault();
   });
@@ -1194,6 +1203,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         window.history.replaceState(null, null, message.queryString);
       } else if (message.mode === "push") {
         window.history.pushState(null, null, message.queryString);
+      }
+      if (message.queryString.charAt(0) === "#") {
+        $(document).trigger("hashchange");
       }
     });
 
@@ -5342,19 +5354,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
     initialValues['.clientdata_url_hash'] = window.location.hash;
 
-    /*
-      $(window).on('hashchange', function(e) {
-        console.log("got here");
-        inputs.setInput('.clientdata_url_hash', location.hash);
-      });
-    */
-
-    window.addEventListener('hashchange', function () {
-      console.log("got here");
+    $(window).on('hashchange', function (e) {
       inputs.setInput('.clientdata_url_hash', location.hash);
-    }, false);
-
-    // $(window).hashchange();
+    });
 
     // The server needs to know what singletons were rendered as part of
     // the page loading
