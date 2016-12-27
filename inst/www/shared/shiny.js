@@ -1190,14 +1190,15 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     });
 
     addMessageHandler('updateQueryString', function (message) {
+      var what = null;
+      if (message.queryString.charAt(0) === "#") what = "hash";else if (message.queryString.charAt(0) === "?") what = "query";else throw "The 'query' string must start with either '?' " + "(to update the query string) or with '#' (to " + "update the hash).";
+
       if (message.mode === "replace") {
         window.history.replaceState(null, null, message.queryString);
       } else if (message.mode === "push") {
         window.history.pushState(null, null, message.queryString);
       }
-      if (message.queryString.charAt(0) === "#") {
-        $(document).trigger("hashchange");
-      }
+      if (what === "hash") $(document).trigger("hashchange");
     });
 
     addMessageHandler("resetBrush", function (message) {
