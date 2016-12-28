@@ -9,11 +9,12 @@ Now there's an official way to slow down reactive values and expressions that in
 
 ### Breaking changes
 
-* 
-
 * Added a new `placeholder` argument to `verbatimTextOutput()`. The default is `FALSE`, which means that, if there is no content for this output, no representation of this slot will be made in the UI. Previsouly, even if there was no content, you'd see an empty rectangle in the UI that served as a placeholder. You can set `placeholder = TRUE` to revert back to that look. ([#1480](https://github.com/rstudio/shiny/pull/1480))
 
 ### Minor new features and improvements
+
+* Added support for HTML5's `pushState` which allows for pseudo-navigation
+in shiny apps. For more info, see the documentation (`?updateQueryString` and `?getQueryString`). [#1447](https://github.com/rstudio/shiny/pull/1447)
 
 * Addressed [#1486](https://github.com/rstudio/shiny/issue/1486) by adding a new argument to `observeEvent` and `eventReactive`, called `ignoreInit` (defaults to `FALSE` for backwards compatibility). When set to `TRUE`, the action (i.e. the second argument: `handlerExpr` and `valueExpr`, respectively) will not be triggered when the observer/reactive is first created/initialized. In other words, `ignoreInit = TRUE` ensures that the `observeEvent` (or `eventReactive`) is *never* run right away. For more info, see the documentation (`?observeEvent`). ([#1494](https://github.com/rstudio/shiny/pull/1494))
     
