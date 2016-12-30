@@ -17,7 +17,7 @@ NULL
 #' @name shiny-package
 #' @aliases shiny
 #' @docType package
-#' @import htmltools httpuv xtable digest R6 mime
+#' @import htmltools httpuv xtable digest R6 mime rredis
 NULL
 
 # It's necessary to Depend on methods so Rscript doesn't fail. It's necessary
@@ -1302,7 +1302,7 @@ ShinySession <- R6Class(
             }
           )
 
-          if (store == "server") {
+          if (store %in% c("server", "redis")) {
             url <- saveShinySaveState(saveState)
           } else if (store == "url") {
             url <- encodeShinySaveState(saveState)

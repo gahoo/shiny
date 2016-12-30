@@ -56,7 +56,7 @@ saveShinySaveState <- function(state) {
 
   # A function for saving the state object to disk, given a directory to save
   # to.
-  saveState <- function(stateDir) {
+  saveStateLocal <- function(stateDir) {
     state$dir <- stateDir
 
     # Allow user-supplied onSave function to do things like add state$values, or
@@ -72,6 +72,26 @@ saveShinySaveState <- function(state) {
     # If values were added, save them also.
     if (length(state$values) != 0)
       saveRDS(state$values, file.path(stateDir, "values.rds"))
+  }
+
+  saveStateRedis <- function(id) {
+    # Allow user-supplied onSave function to do things like add state$values, or
+    # save data to state dir.
+    if (!is.null(state$onSave))
+      isolate(state$onSave(state))
+
+    # Serialize values, possibly saving some extra data to redis
+    exclude <- c(state$exclude, "._bookmark_")
+    inputValues <- serializeReactiveValues(state$input, exclude, state$dir)
+    redisHSet(id, 'input', inputValues)
+
+    expireTime <- getShinyOption("redisExpire", 600)
+    if(!is.infinite(expireTime))
+      redisExpire(id, expireTime)
+
+    # If values were added, save them also.
+    if (length(state$values) != 0)
+      redisHSet(id, 'values', state$values)
   }
 
   # Pass the saveState function to the save interface function, which will
@@ -92,6 +112,15 @@ saveShinySaveState <- function(state) {
     } else {
       # We're running Shiny locally.
       saveInterface <- saveInterfaceLocal
+      store <- getShinyOption("bookmarkStore", default = "")
+      if (store == 'server'){
+        saveInterface <- saveInterfaceLocal
+        saveState <- saveStateLocal
+
+      } else if (store == 'redis'){
+        saveInterface <- redisInterface
+        saveState <- saveStateRedis
+      }
     }
   }
 
@@ -250,7 +279,7 @@ RestoreContext <- R6Class("RestoreContext",
 
       # This function is passed to the loadInterface function; given a
       # directory, it will load state from that directory
-      loadFun <- function(stateDir) {
+      loadLocalFun <- function(stateDir) {
         self$dir <- stateDir
 
         if (!dirExists(stateDir)) {
@@ -278,6 +307,32 @@ RestoreContext <- R6Class("RestoreContext",
         }
       }
 
+      loadRedisFun <- function(id) {
+
+        if (!redisExists(id)) {
+          stop("Bookmarked state does not exist.")
+        }
+
+        tryCatch({
+          inputValues <- redisHGet(id, 'input')
+          self$input <- RestoreInputSet$new(inputValues)
+        },
+        error = function(e) {
+          stop("Error reading input values from redis.")
+        }
+        )
+
+        if (redisHExists(id, 'values')) {
+          tryCatch({
+            self$values <- redisHGet(id, 'values')
+          },
+          error = function(e) {
+            stop("Error reading values from redis.")
+          }
+          )
+        }
+      }
+
       # Look for a load.interface function. This will be defined by the hosting
       # environment if it supports bookmarking.
       loadInterface <- getShinyOption("load.interface")
@@ -289,10 +344,19 @@ RestoreContext <- R6Class("RestoreContext",
           loadInterface <- function(id, callback) {
             stop("The hosting environment does not support saved-to-server bookmarking.")
           }
+          loadFun <- loadLocalFun
 
         } else {
           # We're running Shiny locally.
-          loadInterface <- loadInterfaceLocal
+          store <- getShinyOption("bookmarkStore", default = "")
+          if (store == 'server'){
+            loadInterface <- loadInterfaceLocal
+            loadFun <- loadLocalFun
+
+          } else if (store == 'redis'){
+            loadInterface <- redisInterface
+            loadFun <- loadRedisFun
+          }
         }
       }
 
@@ -639,6 +703,8 @@ showBookmarkUrlModal <- function(url) {
     subtitle <- "This link stores the current state of this application."
   } else if (store == "server") {
     subtitle <- "The current state of this application has been stored on the server."
+  } else if (store == "redis") {
+    subtitle <- "The current state of this application has been stored on redis."
   } else {
     subtitle <- NULL
   }
@@ -870,7 +936,7 @@ showBookmarkUrlModal <- function(url) {
 #' shinyApp(ui, server)
 #'
 #' }
-enableBookmarking <- function(store = c("url", "server", "disable")) {
+enableBookmarking <- function(store = c("url", "server", "redis", "disable")) {
   store <- match.arg(store)
   shinyOptions(bookmarkStore = store)
 }
