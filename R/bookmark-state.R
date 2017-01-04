@@ -75,6 +75,11 @@ saveShinySaveState <- function(state) {
   }
 
   saveStateRedis <- function(id) {
+    storeFileInRedis <- getShinyOption("storeFileInRedis", default = TRUE)
+    if (!storeFileInRedis) {
+      state$dir <- saveInterfaceLocal(id, function(stateDir) {stateDir})
+    }
+
     # Allow user-supplied onSave function to do things like add state$values, or
     # save data to state dir.
     if (!is.null(state$onSave))
@@ -82,7 +87,7 @@ saveShinySaveState <- function(state) {
 
     # Serialize values, possibly saving some extra data to redis
     exclude <- c(state$exclude, "._bookmark_")
-    inputValues <- serializeReactiveValues(state$input, exclude, state$dir)
+    inputValues <- serializeReactiveValues(state$input, exclude, state$dir, id)
     redisHSet(id, 'input', inputValues)
 
     expireTime <- getShinyOption("redisExpire", 600)
@@ -91,7 +96,8 @@ saveShinySaveState <- function(state) {
 
     # If values were added, save them also.
     if (length(state$values) != 0)
-      redisHSet(id, 'values', state$values)
+      redisIndicator(redisHSet, "Saving values to redis.", key = id, field = 'values', value = state$values)
+      #redisHSet(id, 'values', state$values)
   }
 
   # Pass the saveState function to the save interface function, which will
@@ -197,6 +203,7 @@ RestoreContext <- R6Class("RestoreContext",
 
     # Directory for extra files, if restoring from state that was saved to disk.
     dir = NULL,
+    id = NULL,
 
     # For values other than input values. These values don't need the special
     # phandling that's needed for input values, because they're only accessed
@@ -244,6 +251,7 @@ RestoreContext <- R6Class("RestoreContext",
       self$input <- RestoreInputSet$new(list())
       self$values <- new.env(parent = emptyenv())
       self$dir <- NULL
+      self$id <- NULL
     },
 
     # This should be called before a restore context is popped off the stack.
@@ -261,6 +269,7 @@ RestoreContext <- R6Class("RestoreContext",
       list(
         input = self$input$asList(),
         dir = self$dir,
+        id = self$id,
         values = self$values
       )
     }
@@ -308,6 +317,12 @@ RestoreContext <- R6Class("RestoreContext",
       }
 
       loadRedisFun <- function(id) {
+        self$id <- id
+
+        storeFileInRedis <- getShinyOption("storeFileInRedis", default = TRUE)
+        if (!storeFileInRedis) {
+          self$dir <- saveInterfaceLocal(id, function(stateDir) {stateDir})
+        }
 
         if (!redisExists(id)) {
           stop("Bookmarked state does not exist.")
@@ -324,6 +339,7 @@ RestoreContext <- R6Class("RestoreContext",
 
         if (redisHExists(id, 'values')) {
           tryCatch({
+            #self$values <- redisIndicator(redisHGet, "loading values from redis.", key = id, field = 'values')
             self$values <- redisHGet(id, 'values')
           },
           error = function(e) {
