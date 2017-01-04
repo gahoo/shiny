@@ -206,10 +206,31 @@ registerInputHandler("shiny.file", function(val, shinysession, name) {
 
   # Copy the original file to a new temp dir, so that a restored session can't
   # modify the original.
+  store <- getShinyOption("bookmarkStore", default = "")
+  storeFileInRedis <- getShinyOption("storeFileInRedis", default = TRUE)
+  filename <- val$datapath
   newdir <- file.path(tempdir(), createUniqueId(12))
   dir.create(newdir)
   val$datapath <- file.path(newdir, val$datapath)
-  file.copy(oldfile, val$datapath)
+
+  loadRedisFiles <- function(id, filenames){
+    loadRedisFile <- function(id, filename){
+      content <- redisHGet(id, filename, raw = TRUE)
+      datapath <- file.path(newdir, filename)
+      writeBin(content, datapath)
+    }
+
+    redisProgress(filenames, loadRedisFile, "Load files from redis.", id = id)
+
+  }
+
+  if (store == 'redis' && storeFileInRedis == TRUE) {
+    id <- getCurrentRestoreContext()$id
+    redisInterface(id, loadRedisFiles, filenames=filename)
+  } else {
+    file.copy(oldfile, val$datapath)
+  }
+
 
   # Need to mark this input value with the correct serializer. When a file is
   # uploaded the usual way (instead of being restored), this occurs in
