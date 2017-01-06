@@ -10,6 +10,7 @@ ShinySaveState <- R6Class("ShinySaveState",
     # These are set not in initialize(), but by external functions that modify
     # the ShinySaveState object.
     dir = NULL,
+    id = NULL,
 
 
     initialize = function(input = NULL, exclude = NULL, onSave = NULL) {
@@ -75,6 +76,7 @@ saveShinySaveState <- function(state) {
   }
 
   saveStateRedis <- function(id) {
+    state$id <- id
     storeFileInRedis <- getShinyOption("storeFileInRedis", default = TRUE)
     if (!storeFileInRedis) {
       state$dir <- saveInterfaceLocal(id, function(stateDir) {stateDir})
@@ -343,7 +345,7 @@ RestoreContext <- R6Class("RestoreContext",
             self$values <- redisHGet(id, 'values')
           },
           error = function(e) {
-            stop("Error reading values from redis.")
+            stop(paste("Error reading values from redis:", e))
           }
           )
         }
